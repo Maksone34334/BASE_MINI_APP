@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "OSINT Mini - Base App",
   description: "Professional OSINT intelligence platform built on Base",
   generator: "Base Mini App",
-  metadataBase: new URL('https://osint-mini.vercel.app'),
+  metadataBase: new URL('https://base-mini-app-flame.vercel.app'),
   openGraph: {
     title: "OSINT Mini - Base App",
     description: "Professional OSINT intelligence platform built on Base",

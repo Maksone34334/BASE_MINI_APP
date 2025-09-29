@@ -12,10 +12,10 @@ export const minikitConfig = {
     name: "OSINT Mini",
     subtitle: "Professional OSINT Intelligence Platform",
     description: "Advanced OSINT tools and analytics on Base blockchain",
-    screenshot: "https://osint-mini.vercel.app/images/screenshot.png",
-    icon: "https://osint-mini.vercel.app/favicon.ico",
-    homeUrl: "https://osint-mini.vercel.app",
-    webhookUrl: "https://osint-mini.vercel.app/api/webhook",
+    screenshot: "https://base-mini-app-flame.vercel.app/images/screenshot.png",
+    icon: "https://base-mini-app-flame.vercel.app/favicon.ico",
+    homeUrl: "https://base-mini-app-flame.vercel.app",
+    webhookUrl: "https://base-mini-app-flame.vercel.app/api/webhook",
     categories: ["tools", "analytics"],
     tags: ["osint", "intelligence", "analytics", "blockchain"]
   }
