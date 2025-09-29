@@ -5,6 +5,9 @@ export const minikitConfig = {
     payload: "",
     signature: ""
   },
+  baseBuilder: {
+    allowedAddresses: ["0x69D51B18C1EfE88A9302a03A60127d98eD3D307D"]
+  },
   miniapp: {
     version: "1",
     name: "OSINT Mini",
