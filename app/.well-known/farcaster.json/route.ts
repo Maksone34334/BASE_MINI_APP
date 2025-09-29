@@ -7,6 +7,8 @@ export async function GET() {
     frame: {
       version: minikitConfig.miniapp.version,
       name: minikitConfig.miniapp.name,
+      subtitle: minikitConfig.miniapp.subtitle,
+      description: minikitConfig.miniapp.description,
       homeUrl: minikitConfig.miniapp.homeUrl,
       iconUrl: minikitConfig.miniapp.icon,
       splashImageUrl: minikitConfig.miniapp.screenshot,
