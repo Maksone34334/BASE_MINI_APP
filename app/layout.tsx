@@ -3,28 +3,41 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from './providers'
 
+const APP_URL = 'https://base-mini-app-flame.vercel.app';
+const APP_NAME = 'OSINT Mini';
+
 export const metadata: Metadata = {
   title: "OSINT Mini - Base App",
   description: "Professional OSINT intelligence platform built on Base",
   generator: "Base Mini App",
-  metadataBase: new URL('https://base-mini-app-flame.vercel.app'),
+  metadataBase: new URL(APP_URL),
   openGraph: {
     title: "OSINT Mini - Base App",
     description: "Professional OSINT intelligence platform built on Base",
-    images: ["/images/og-image.jpg"],
+    images: [`${APP_URL}/images/osint-hub-nft.png`],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "OSINT Mini - Base App",
     description: "Professional OSINT intelligence platform built on Base",
-    images: ["/images/og-image.jpg"],
+    images: [`${APP_URL}/images/osint-hub-nft.png`],
   },
   other: {
-    'fc:frame': 'vNext',
-    'fc:frame:image': '/images/frame-image.jpg',
-    'fc:frame:button:1': 'Launch OSINT Mini',
-    'fc:frame:post_url': '/api/frame',
+    'fc:frame': JSON.stringify({
+      version: 'next',
+      imageUrl: `${APP_URL}/images/osint-hub-nft.png`,
+      button: {
+        title: `Launch ${APP_NAME}`,
+        action: {
+          type: 'launch_frame',
+          name: APP_NAME,
+          url: APP_URL,
+          splashImageUrl: `${APP_URL}/images/osint-hub-nft.png`,
+          splashBackgroundColor: '#0052FF'
+        }
+      }
+    })
   }
 }
 
