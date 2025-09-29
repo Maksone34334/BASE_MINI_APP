@@ -13,7 +13,7 @@ export async function GET() {
       iconUrl: minikitConfig.miniapp.icon,
       splashImageUrl: minikitConfig.miniapp.screenshot,
       webhookUrl: minikitConfig.miniapp.webhookUrl,
-      ogImageUrl: minikitConfig.miniapp.screenshot
+      ogImageUrl: minikitConfig.miniapp.ogImageUrl
     }
   });
 }
