@@ -32,9 +32,7 @@ export const metadata: Metadata = {
         action: {
           type: 'launch_frame',
           name: APP_NAME,
-          url: APP_URL,
-          splashImageUrl: `${APP_URL}/images/osint-identity-card.png`,
-          splashBackgroundColor: '#0052FF'
+          url: APP_URL
         }
       }
     })
