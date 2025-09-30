@@ -14,26 +14,26 @@ export const metadata: Metadata = {
   openGraph: {
     title: "OSINT Mini - Base App",
     description: "Professional OSINT intelligence platform built on Base",
-    images: [`${APP_URL}/images/osint-hub-nft.png`],
+    images: [`${APP_URL}/images/osint-identity-card.png`],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "OSINT Mini - Base App",
     description: "Professional OSINT intelligence platform built on Base",
-    images: [`${APP_URL}/images/osint-hub-nft.png`],
+    images: [`${APP_URL}/images/osint-identity-card.png`],
   },
   other: {
     'fc:frame': JSON.stringify({
       version: 'next',
-      imageUrl: `${APP_URL}/images/osint-hub-nft.png`,
+      imageUrl: `${APP_URL}/images/osint-identity-card.png`,
       button: {
         title: `Launch ${APP_NAME}`,
         action: {
           type: 'launch_frame',
           name: APP_NAME,
           url: APP_URL,
-          splashImageUrl: `${APP_URL}/images/osint-hub-nft.png`,
+          splashImageUrl: `${APP_URL}/images/osint-identity-card.png`,
           splashBackgroundColor: '#0052FF'
         }
       }
