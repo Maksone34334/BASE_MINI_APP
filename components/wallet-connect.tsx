@@ -15,13 +15,25 @@ interface WalletConnectProps {
 declare global {
   interface Window {
     ethereum?: any
+    coinbaseWalletExtension?: any
   }
+}
+
+interface EIP6963ProviderDetail {
+  info: {
+    uuid: string
+    name: string
+    icon: string
+    rdns: string
+  }
+  provider: any
 }
 
 export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [provider, setProvider] = useState<any>(null)
   const [nftStatus, setNftStatus] = useState<{
     hasNFT: boolean
     balance: number
@@ -36,14 +48,35 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   const NFT_CONTRACT_BASE = "0x8cf392D33050F96cF6D0748486490d3dEae52564"
   const BASE_MAINNET_CHAIN_ID = "0x2105" // 8453 in hex
 
+  // Detect available wallet providers
+  const getProvider = () => {
+    if (typeof window === "undefined") return null
+
+    // Check for Coinbase Wallet
+    if (window.coinbaseWalletExtension) {
+      console.log("Using Coinbase Wallet")
+      return window.coinbaseWalletExtension
+    }
+
+    // Check for injected provider (MetaMask, etc)
+    if (window.ethereum) {
+      console.log("Using injected provider:", window.ethereum)
+      return window.ethereum
+    }
+
+    return null
+  }
+
   useEffect(() => {
     checkWalletConnection()
   }, [])
 
   const checkWalletConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
+    const walletProvider = getProvider()
+    if (walletProvider) {
       try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" })
+        setProvider(walletProvider)
+        const accounts = await walletProvider.request({ method: "eth_accounts" })
         if (accounts.length > 0) {
           setWalletAddress(accounts[0])
           await verifyNFTOwnership(accounts[0])
@@ -55,8 +88,15 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   }
 
   const connectWallet = async () => {
-    if (!window.ethereum) {
-      setError("MetaMask is not installed. Please install MetaMask to continue.")
+    const walletProvider = getProvider()
+
+    if (!walletProvider) {
+      setError("No wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.")
+      toast({
+        title: "No Wallet Found",
+        description: "Please install a Web3 wallet to continue",
+        variant: "destructive",
+      })
       return
     }
 
@@ -64,8 +104,11 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     setError("")
 
     try {
+      console.log("Connecting to wallet...")
+      setProvider(walletProvider)
+
       // Request account access
-      const accounts = await window.ethereum.request({
+      const accounts = await walletProvider.request({
         method: "eth_requestAccounts",
       })
 
@@ -163,10 +206,14 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       console.log("Wallet address:", walletAddress)
       console.log("Message bytes:", new TextEncoder().encode(message))
 
+      if (!provider) {
+        throw new Error("Wallet provider not available")
+      }
+
       // Request signature - try standard params order first
       let signature
       try {
-        signature = await window.ethereum.request({
+        signature = await provider.request({
           method: "personal_sign",
           params: [message, walletAddress],
         })
@@ -174,7 +221,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       } catch (e) {
         console.log("Standard order failed, trying reverse order...")
         // Some mobile wallets use reverse order
-        signature = await window.ethereum.request({
+        signature = await provider.request({
           method: "personal_sign",
           params: [walletAddress, message],
         })
@@ -366,18 +413,27 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           </div>
         )}
 
-        {/* MetaMask Installation */}
-        {typeof window !== "undefined" && !window.ethereum && (
+        {/* Wallet Installation */}
+        {typeof window !== "undefined" && !getProvider() && (
           <Alert className="bg-blue-900/50 border-blue-700">
             <AlertDescription className="text-blue-200">
-              MetaMask is required to connect your wallet.{" "}
+              A Web3 wallet is required to connect. Install:{" "}
               <a
                 href="https://metamask.io/download/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                Install MetaMask
+                MetaMask
+              </a>
+              {" or "}
+              <a
+                href="https://www.coinbase.com/wallet"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Coinbase Wallet
               </a>
             </AlertDescription>
           </Alert>
