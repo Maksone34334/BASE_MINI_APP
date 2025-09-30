@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -38,105 +38,8 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   const BASE_MAINNET_CHAIN_ID = "0x2105" // 8453 in hex
   const MONAD_TESTNET_CHAIN_ID = "0x15B3" // 5555 in hex
 
-  useEffect(() => {
-    checkWalletConnection()
-  }, [])
-
-  const checkWalletConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" })
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0])
-          await verifyNFTOwnership(accounts[0])
-        }
-      } catch (error) {
-        console.error("Error checking wallet connection:", error)
-      }
-    }
-  }
-
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      setError("MetaMask is not installed. Please install MetaMask to continue.")
-      return
-    }
-
-    setIsConnecting(true)
-    setError("")
-
-    try {
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      })
-
-      if (accounts.length === 0) {
-        throw new Error("No accounts found")
-      }
-
-      const account = accounts[0]
-      setWalletAddress(account)
-
-      // Switch to Monad Testnet if needed
-      await switchToMonadTestnet()
-
-      // Verify NFT ownership
-      await verifyNFTOwnership(account)
-
-      toast({
-        title: "Wallet Connected",
-        description: `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`,
-      })
-    } catch (error: any) {
-      console.error("Error connecting wallet:", error)
-      setError(error.message || "Failed to connect wallet")
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to connect wallet",
-        variant: "destructive",
-      })
-    } finally {
-      setIsConnecting(false)
-    }
-  }
-
-  const switchToMonadTestnet = async () => {
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: MONAD_TESTNET_CHAIN_ID }],
-      })
-    } catch (switchError: any) {
-      // Chain not added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: MONAD_TESTNET_CHAIN_ID,
-                chainName: "Monad Testnet",
-                nativeCurrency: {
-                  name: "MON",
-                  symbol: "MON",
-                  decimals: 18,
-                },
-                rpcUrls: ["https://testnet-rpc.monad.xyz"],
-                blockExplorerUrls: ["https://testnet-explorer.monad.xyz"],
-              },
-            ],
-          })
-        } catch (addError) {
-          throw new Error("Failed to add Monad Testnet to MetaMask")
-        }
-      } else {
-        throw new Error("Failed to switch to Monad Testnet")
-      }
-    }
-  }
-
-  const verifyNFTOwnership = async (address: string) => {
+  // Memoized verification function
+  const verifyNFTOwnership = useCallback(async (address: string) => {
     setIsVerifying(true)
     try {
       const response = await fetch("/api/auth/verify-nft", {
@@ -181,11 +84,177 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     } finally {
       setIsVerifying(false)
     }
+  }, [toast])
+
+  // Check wallet connection on mount
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_accounts" })
+          if (accounts.length > 0) {
+            setWalletAddress(accounts[0])
+            await verifyNFTOwnership(accounts[0])
+          }
+        } catch (error) {
+          console.error("Error checking wallet connection:", error)
+        }
+      }
+    }
+
+    checkWalletConnection()
+  }, [verifyNFTOwnership])
+
+  // Handle account and network changes
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.ethereum) return
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        // User disconnected wallet
+        setWalletAddress(null)
+        setNftStatus({ hasNFT: false, balance: 0, checked: false, networks: [], details: null })
+        toast({
+          title: "Wallet Disconnected",
+          description: "Please connect your wallet again",
+        })
+      } else if (accounts[0] !== walletAddress) {
+        // User switched account
+        setWalletAddress(accounts[0])
+        verifyNFTOwnership(accounts[0])
+        toast({
+          title: "Account Changed",
+          description: `Switched to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
+        })
+      }
+    }
+
+    const handleChainChanged = () => {
+      // Reload the page on network change
+      window.location.reload()
+    }
+
+    const handleDisconnect = () => {
+      setWalletAddress(null)
+      setNftStatus({ hasNFT: false, balance: 0, checked: false, networks: [], details: null })
+    }
+
+    // Subscribe to events
+    window.ethereum.on("accountsChanged", handleAccountsChanged)
+    window.ethereum.on("chainChanged", handleChainChanged)
+    window.ethereum.on("disconnect", handleDisconnect)
+
+    // Cleanup
+    return () => {
+      if (window.ethereum.removeListener) {
+        window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
+        window.ethereum.removeListener("chainChanged", handleChainChanged)
+        window.ethereum.removeListener("disconnect", handleDisconnect)
+      }
+    }
+  }, [walletAddress, verifyNFTOwnership, toast])
+
+  const switchToMonadTestnet = async () => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      throw new Error("MetaMask is not available")
+    }
+
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: MONAD_TESTNET_CHAIN_ID }],
+      })
+    } catch (switchError: any) {
+      // Chain not added to MetaMask
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: MONAD_TESTNET_CHAIN_ID,
+                chainName: "Monad Testnet",
+                nativeCurrency: {
+                  name: "MON",
+                  symbol: "MON",
+                  decimals: 18,
+                },
+                rpcUrls: ["https://testnet-rpc.monad.xyz"],
+                blockExplorerUrls: ["https://testnet-explorer.monad.xyz"],
+              },
+            ],
+          })
+        } catch (addError) {
+          throw new Error("Failed to add Monad Testnet to MetaMask")
+        }
+      } else if (switchError.code === 4001) {
+        // User rejected the request
+        throw new Error("User rejected network switch")
+      } else {
+        throw new Error("Failed to switch to Monad Testnet")
+      }
+    }
+  }
+
+  const connectWallet = async () => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      setError("MetaMask is not installed. Please install MetaMask to continue.")
+      toast({
+        title: "MetaMask Not Found",
+        description: "Please install MetaMask extension",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsConnecting(true)
+    setError("")
+
+    try {
+      // Request account access
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      })
+
+      if (accounts.length === 0) {
+        throw new Error("No accounts found")
+      }
+
+      const account = accounts[0]
+      setWalletAddress(account)
+
+      // Switch to Monad Testnet if needed
+      await switchToMonadTestnet()
+
+      // Verify NFT ownership
+      await verifyNFTOwnership(account)
+
+      toast({
+        title: "Wallet Connected",
+        description: `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`,
+      })
+    } catch (error: any) {
+      console.error("Error connecting wallet:", error)
+      const errorMessage = error.message || "Failed to connect wallet"
+      setError(errorMessage)
+      toast({
+        title: "Connection Failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
   }
 
   const authenticateWithNFT = async () => {
     if (!walletAddress || !nftStatus.hasNFT) {
       setError("Wallet not connected or NFT not found")
+      return
+    }
+
+    if (typeof window === "undefined" || !window.ethereum) {
+      setError("MetaMask is not available")
       return
     }
 
@@ -230,10 +299,11 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       })
     } catch (error: any) {
       console.error("Authentication error:", error)
-      setError(error.message)
+      const errorMessage = error.message || "Authentication failed"
+      setError(errorMessage)
       toast({
         title: "Authentication Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -333,7 +403,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
                   <code className="text-primary text-xs">
                     {NFT_CONTRACT_MONAD.slice(0, 10)}...{NFT_CONTRACT_MONAD.slice(-8)}
                   </code>
-                  <a
+                  
                     href={`https://testnet-explorer.monad.xyz/address/${NFT_CONTRACT_MONAD}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -354,7 +424,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
                   <code className="text-primary text-xs">
                     {NFT_CONTRACT_BASE.slice(0, 10)}...{NFT_CONTRACT_BASE.slice(-8)}
                   </code>
-                  <a
+                  
                     href={`https://basescan.org/address/${NFT_CONTRACT_BASE}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -408,7 +478,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           <Alert className="bg-blue-900/50 border-blue-700">
             <AlertDescription className="text-blue-200">
               MetaMask is required to connect your wallet.{" "}
-              <a
+              
                 href="https://metamask.io/download/"
                 target="_blank"
                 rel="noopener noreferrer"
