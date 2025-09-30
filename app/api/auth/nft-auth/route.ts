@@ -122,6 +122,18 @@ export async function POST(request: NextRequest) {
 
     // Validate message format - check if it starts with the expected prefix and contains the wallet address
     const messagePrefix = "Login to OSINT HUB with wallet:"
+
+    // Log detailed information for debugging
+    console.log('=== NFT Auth Debug ===')
+    console.log('Received message:', JSON.stringify(message))
+    console.log('Message length:', message.length)
+    console.log('Message bytes:', Buffer.from(message).toString('hex'))
+    console.log('Wallet address:', walletAddress)
+    console.log('Expected:', `${messagePrefix} ${walletAddress}`)
+    console.log('Has prefix:', message.includes(messagePrefix))
+    console.log('Has address:', message.toLowerCase().includes(walletAddress.toLowerCase()))
+    console.log('===================')
+
     if (!message.includes(messagePrefix) || !message.toLowerCase().includes(walletAddress.toLowerCase())) {
       console.log('Message validation failed:', {
         received: message,
