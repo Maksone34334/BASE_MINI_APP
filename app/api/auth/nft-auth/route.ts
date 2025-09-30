@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-const MONAD_TESTNET_RPC = "https://testnet-rpc.monad.xyz"
-const NFT_CONTRACT_ADDRESS_MONAD = "0xC1C4d4A5A384DE53BcFadB43D0e8b08966195757"
 const BASE_MAINNET_RPCS = [
   "https://mainnet.base.org",
   "https://base-mainnet.public.blastapi.io",
@@ -72,22 +70,15 @@ async function checkNFTBalance(rpcUrl: string, contractAddress: string, walletAd
 
 async function checkNFTOwnership(walletAddress: string): Promise<{ hasNFT: boolean; details: any }> {
   try {
-    const [monadBalance, baseBalance] = await Promise.all([
-      checkNFTBalance(MONAD_TESTNET_RPC, NFT_CONTRACT_ADDRESS_MONAD, walletAddress).catch(() => 0),
-      checkNFTBalanceWithFallback(BASE_MAINNET_RPCS, NFT_CONTRACT_ADDRESS_BASE, walletAddress),
-    ])
+    const baseBalance = await checkNFTBalanceWithFallback(
+      BASE_MAINNET_RPCS,
+      NFT_CONTRACT_ADDRESS_BASE,
+      walletAddress,
+    )
 
-    const totalBalance = monadBalance + baseBalance
-    const hasNFT = totalBalance > 0
+    const hasNFT = baseBalance > 0
 
     const networks = []
-    if (monadBalance > 0) {
-      networks.push({
-        name: "Monad Testnet",
-        balance: monadBalance,
-        contractAddress: NFT_CONTRACT_ADDRESS_MONAD,
-      })
-    }
     if (baseBalance > 0) {
       networks.push({
         name: "Base Mainnet",
@@ -99,16 +90,9 @@ async function checkNFTOwnership(walletAddress: string): Promise<{ hasNFT: boole
     return {
       hasNFT,
       details: {
-        totalBalance,
-        monadBalance,
+        totalBalance: baseBalance,
         baseBalance,
         networks,
-        monad: {
-          hasNFT: monadBalance > 0,
-          balance: monadBalance,
-          contractAddress: NFT_CONTRACT_ADDRESS_MONAD,
-          network: "Monad Testnet",
-        },
         base: {
           hasNFT: baseBalance > 0,
           balance: baseBalance,
