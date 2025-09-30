@@ -35,10 +35,9 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
 
   const NFT_CONTRACT_MONAD = "0xC1C4d4A5A384DE53BcFadB43D0e8b08966195757"
   const NFT_CONTRACT_BASE = "0x8cf392D33050F96cF6D0748486490d3dEae52564"
-  const BASE_MAINNET_CHAIN_ID = "0x2105" // 8453 in hex
-  const MONAD_TESTNET_CHAIN_ID = "0x15B3" // 5555 in hex
+  const BASE_MAINNET_CHAIN_ID = "0x2105"
+  const MONAD_TESTNET_CHAIN_ID = "0x15B3"
 
-  // Memoized verification function
   const verifyNFTOwnership = useCallback(async (address: string) => {
     setIsVerifying(true)
     try {
@@ -86,7 +85,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     }
   }, [toast])
 
-  // Check wallet connection on mount
   useEffect(() => {
     const checkWalletConnection = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
@@ -105,13 +103,11 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     checkWalletConnection()
   }, [verifyNFTOwnership])
 
-  // Handle account and network changes
   useEffect(() => {
     if (typeof window === "undefined" || !window.ethereum) return
 
     const handleAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
-        // User disconnected wallet
         setWalletAddress(null)
         setNftStatus({ hasNFT: false, balance: 0, checked: false, networks: [], details: null })
         toast({
@@ -119,7 +115,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           description: "Please connect your wallet again",
         })
       } else if (accounts[0] !== walletAddress) {
-        // User switched account
         setWalletAddress(accounts[0])
         verifyNFTOwnership(accounts[0])
         toast({
@@ -130,7 +125,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     }
 
     const handleChainChanged = () => {
-      // Reload the page on network change
       window.location.reload()
     }
 
@@ -139,12 +133,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       setNftStatus({ hasNFT: false, balance: 0, checked: false, networks: [], details: null })
     }
 
-    // Subscribe to events
     window.ethereum.on("accountsChanged", handleAccountsChanged)
     window.ethereum.on("chainChanged", handleChainChanged)
     window.ethereum.on("disconnect", handleDisconnect)
 
-    // Cleanup
     return () => {
       if (window.ethereum.removeListener) {
         window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
@@ -165,7 +157,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
         params: [{ chainId: MONAD_TESTNET_CHAIN_ID }],
       })
     } catch (switchError: any) {
-      // Chain not added to MetaMask
       if (switchError.code === 4902) {
         try {
           await window.ethereum.request({
@@ -188,7 +179,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           throw new Error("Failed to add Monad Testnet to MetaMask")
         }
       } else if (switchError.code === 4001) {
-        // User rejected the request
         throw new Error("User rejected network switch")
       } else {
         throw new Error("Failed to switch to Monad Testnet")
@@ -211,7 +201,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     setError("")
 
     try {
-      // Request account access
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       })
@@ -223,10 +212,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       const account = accounts[0]
       setWalletAddress(account)
 
-      // Switch to Monad Testnet if needed
       await switchToMonadTestnet()
-
-      // Verify NFT ownership
       await verifyNFTOwnership(account)
 
       toast({
@@ -262,16 +248,13 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     setError("")
 
     try {
-      // Create message to sign
       const message = `Login to OSINT HUB with wallet: ${walletAddress}`
 
-      // Request signature
       const signature = await window.ethereum.request({
         method: "personal_sign",
         params: [message, walletAddress],
       })
 
-      // Authenticate with backend
       const response = await fetch("/api/auth/nft-auth", {
         method: "POST",
         headers: {
@@ -290,7 +273,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
         throw new Error(data.error || "Authentication failed")
       }
 
-      // Success - call parent callback
       onAuthSuccess(data.user, data.token)
 
       toast({
@@ -330,7 +312,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           </Alert>
         )}
 
-        {/* Wallet Connection */}
         <div className="space-y-3">
           {!walletAddress ? (
             <Button
@@ -362,7 +343,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           )}
         </div>
 
-        {/* NFT Verification Status */}
         {walletAddress && (
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-background/30 rounded border border-primary/20">
@@ -391,13 +371,11 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
               )}
             </div>
 
-            {/* Contract Info */}
             <div className="text-xs text-muted-foreground bg-background/30 p-3 rounded border border-primary/20">
               <p className="mb-3">
                 <strong>Required NFT Contracts:</strong>
               </p>
 
-              {/* Monad Contract */}
               <div className="mb-3 pb-2 border-b border-primary/10">
                 <div className="flex items-center justify-between mb-1">
                   <code className="text-primary text-xs">
@@ -418,7 +396,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
                 )}
               </div>
 
-              {/* Base Mainnet Contract */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <code className="text-primary text-xs">
@@ -440,7 +417,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
               </div>
             </div>
 
-            {/* Authentication Button */}
             {nftStatus.hasNFT && (
               <Button
                 onClick={authenticateWithNFT}
@@ -461,7 +437,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
               </Button>
             )}
 
-            {/* No NFT Message */}
             {nftStatus.checked && !nftStatus.hasNFT && (
               <Alert className="bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
@@ -473,7 +448,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           </div>
         )}
 
-        {/* MetaMask Installation */}
         {typeof window !== "undefined" && !window.ethereum && (
           <Alert className="bg-blue-900/50 border-blue-700">
             <AlertDescription className="text-blue-200">
