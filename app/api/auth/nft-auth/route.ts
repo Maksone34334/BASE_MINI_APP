@@ -136,7 +136,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (message !== `Login to OSINT HUB with wallet: ${walletAddress}`) {
+    const expectedMessage = `Login to OSINT HUB with wallet: ${walletAddress.toLowerCase()}`
+    const receivedMessage = message.toLowerCase()
+
+    if (receivedMessage !== expectedMessage) {
+      console.log('Message mismatch:', { received: message, expected: `Login to OSINT HUB with wallet: ${walletAddress}` })
       return NextResponse.json(
         {
           error: "Invalid message format",
