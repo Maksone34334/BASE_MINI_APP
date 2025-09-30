@@ -10,16 +10,19 @@ export const minikitConfig = {
   miniapp: {
     version: "1",
     name: "OSINT Mini",
-    subtitle: "Professional OSINT Intelligence Platform",
-    description: "Advanced OSINT tools and analytics on Base blockchain",
-    screenshot: "https://base-mini-app-flame.vercel.app/images/osint-identity-card.png",
-    icon: "https://base-mini-app-flame.vercel.app/favicon.ico",
+    subtitle: "Professional OSINT Platform",
+    description: "Advanced OSINT tools and analytics on Base blockchain for professional intelligence gathering",
+    tagline: "Intelligence Made Simple",
     homeUrl: "https://base-mini-app-flame.vercel.app",
-    webhookUrl: "https://base-mini-app-flame.vercel.app/api/webhook",
-    ogImageUrl: "https://base-mini-app-flame.vercel.app/images/osint-identity-card.png",
+    iconUrl: "https://base-mini-app-flame.vercel.app/favicon.ico",
+    splashImageUrl: "https://base-mini-app-flame.vercel.app/images/osint-identity-card.png",
     splashBackgroundColor: "#0052FF",
+    webhookUrl: "https://base-mini-app-flame.vercel.app/api/webhook",
+    heroImageUrl: "https://base-mini-app-flame.vercel.app/images/osint-identity-card.png",
+    ogTitle: "OSINT Mini - Base App",
+    ogDescription: "Professional OSINT intelligence platform built on Base blockchain",
+    ogImageUrl: "https://base-mini-app-flame.vercel.app/images/osint-identity-card.png",
     primaryCategory: "utility",
-    categories: ["tools", "analytics"],
-    tags: ["osint", "intelligence", "analytics", "blockchain"]
+    tags: ["osint", "intelligence", "analytics", "blockchain", "tools"]
   }
 }
