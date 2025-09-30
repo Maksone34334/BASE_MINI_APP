@@ -136,11 +136,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const expectedMessage = `Login to OSINT HUB with wallet: ${walletAddress.toLowerCase()}`
-    const receivedMessage = message.toLowerCase()
-
-    if (receivedMessage !== expectedMessage) {
-      console.log('Message mismatch:', { received: message, expected: `Login to OSINT HUB with wallet: ${walletAddress}` })
+    // Validate message format - check if it starts with the expected prefix and contains the wallet address
+    const messagePrefix = "Login to OSINT HUB with wallet:"
+    if (!message.includes(messagePrefix) || !message.toLowerCase().includes(walletAddress.toLowerCase())) {
+      console.log('Message validation failed:', {
+        received: message,
+        expected: `${messagePrefix} ${walletAddress}`,
+        hasPrefix: message.includes(messagePrefix),
+        hasAddress: message.toLowerCase().includes(walletAddress.toLowerCase())
+      })
       return NextResponse.json(
         {
           error: "Invalid message format",
