@@ -60,6 +60,7 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "thirdweb": "^5.108.5",
     "vaul": "latest",
     "viem": "2.x",
     "zod": "^3.24.1"

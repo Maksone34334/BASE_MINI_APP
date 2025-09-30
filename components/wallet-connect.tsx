@@ -1,27 +1,42 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { ConnectButton, useActiveAccount, useActiveWalletChain } from "thirdweb/react"
+import { createThirdwebClient } from "thirdweb"
+import { createWallet, inAppWallet } from "thirdweb/wallets"
+import { base } from "thirdweb/chains"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Wallet, Shield, CheckCircle, XCircle, Loader2, ExternalLink } from "lucide-react"
+import { Shield, CheckCircle, XCircle, Loader2, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface WalletConnectProps {
   onAuthSuccess: (user: any, token: string) => void
 }
 
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
+const client = createThirdwebClient({
+  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || "",
+})
+
+const wallets = [
+  inAppWallet({
+    auth: {
+      options: ["google", "email"],
+    },
+  }),
+  createWallet("io.metamask"),
+  createWallet("com.coinbase.wallet"),
+  createWallet("me.rainbow"),
+  createWallet("io.rabby"),
+  createWallet("io.zerion.wallet"),
+]
 
 export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
-  const [isConnecting, setIsConnecting] = useState(false)
+  const account = useActiveAccount()
+  const chain = useActiveWalletChain()
   const [isVerifying, setIsVerifying] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [nftStatus, setNftStatus] = useState<{
     hasNFT: boolean
     balance: number
@@ -35,62 +50,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   const NFT_CONTRACT_BASE = "0x8cf392D33050F96cF6D0748486490d3dEae52564"
 
   useEffect(() => {
-    checkWalletConnection()
-  }, [])
-
-  const checkWalletConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" })
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0])
-          await verifyNFTOwnership(accounts[0])
-        }
-      } catch (error) {
-        console.error("Error checking wallet:", error)
-      }
+    if (account?.address) {
+      verifyNFTOwnership(account.address)
     }
-  }
-
-  const connectWallet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      setError("Please open this page in your wallet's browser")
-      toast({
-        title: "Wallet Not Found",
-        description: "Open this page inside MetaMask or Coinbase Wallet browser",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsConnecting(true)
-    setError("")
-
-    try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-      if (accounts.length === 0) {
-        throw new Error("No accounts found")
-      }
-
-      setWalletAddress(accounts[0])
-      await verifyNFTOwnership(accounts[0])
-
-      toast({
-        title: "Wallet Connected",
-        description: `Connected to ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`,
-      })
-    } catch (error: any) {
-      console.error("Connection error:", error)
-      setError(error.message || "Failed to connect")
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to connect",
-        variant: "destructive",
-      })
-    } finally {
-      setIsConnecting(false)
-    }
-  }
+  }, [account?.address])
 
   const verifyNFTOwnership = async (address: string) => {
     setIsVerifying(true)
@@ -133,7 +96,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   }
 
   const authenticateWithNFT = async () => {
-    if (!walletAddress || !nftStatus.hasNFT) {
+    if (!account?.address || !nftStatus.hasNFT) {
       setError("Wallet not connected or NFT not found")
       return
     }
@@ -142,16 +105,19 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     setError("")
 
     try {
-      const message = `Login to OSINT HUB with wallet: ${walletAddress}`
-      const signature = await window.ethereum.request({
-        method: "personal_sign",
-        params: [message, walletAddress],
-      })
+      const message = `Login to OSINT HUB with wallet: ${account.address}`
+
+      // Sign message using thirdweb account
+      const signature = await account.signMessage({ message })
 
       const response = await fetch("/api/auth/nft-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, signature, message }),
+        body: JSON.stringify({
+          walletAddress: account.address,
+          signature,
+          message
+        }),
       })
 
       const data = await response.json()
@@ -196,31 +162,29 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
         )}
 
         {/* Connect Button */}
-        {!walletAddress ? (
-          <Button
-            onClick={connectWallet}
-            disabled={isConnecting}
-            className="w-full bg-primary hover:bg-primary/90 text-white cyber-glow text-lg py-6"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <Wallet className="mr-2 h-5 w-5" />
-                Connect Wallet
-              </>
-            )}
-          </Button>
+        {!account ? (
+          <div className="flex justify-center">
+            <ConnectButton
+              client={client}
+              wallets={wallets}
+              chain={base}
+              connectModal={{
+                size: "wide",
+                title: "Connect Wallet",
+                welcomeScreen: {
+                  title: "OSINT HUB",
+                  subtitle: "Connect to access NFT-gated features",
+                },
+              }}
+            />
+          </div>
         ) : (
           <>
             {/* Wallet Info */}
             <div className="flex items-center justify-between p-3 bg-background/30 rounded border border-primary/20">
               <span className="text-sm text-muted-foreground">Wallet:</span>
               <Badge variant="outline" className="border-green-500 text-green-400">
-                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                {account.address.slice(0, 6)}...{account.address.slice(-4)}
               </Badge>
             </div>
 
@@ -303,20 +267,6 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
               </Alert>
             )}
           </>
-        )}
-
-        {/* Instruction for mobile users */}
-        {typeof window !== "undefined" && !window.ethereum && (
-          <Alert className="bg-blue-900/50 border-blue-700">
-            <AlertDescription className="text-blue-200 text-sm">
-              <p className="font-semibold mb-2">Mobile Users:</p>
-              <p>Open this page inside your wallet's browser:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>MetaMask: Tap Browser → Enter URL</li>
-                <li>Coinbase Wallet: Tap Browser → Enter URL</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
         )}
       </CardContent>
     </Card>
