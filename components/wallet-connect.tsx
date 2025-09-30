@@ -30,64 +30,73 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     details: any
   }>({ hasNFT: false, balance: 0, checked: false, networks: [], details: null })
   const [error, setError] = useState("")
+  const [isClient, setIsClient] = useState(false)
 
   const { toast } = useToast()
 
   const NFT_CONTRACT_MONAD = "0xC1C4d4A5A384DE53BcFadB43D0e8b08966195757"
   const NFT_CONTRACT_BASE = "0x8cf392D33050F96cF6D0748486490d3dEae52564"
-  const BASE_MAINNET_CHAIN_ID = "0x2105"
   const MONAD_TESTNET_CHAIN_ID = "0x15B3"
 
-  const verifyNFTOwnership = useCallback(async (address: string) => {
-    setIsVerifying(true)
-    try {
-      const response = await fetch("/api/auth/verify-nft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ walletAddress: address }),
-      })
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to verify NFT ownership")
-      }
-
-      setNftStatus({
-        hasNFT: data.hasNFT,
-        balance: data.balance,
-        checked: true,
-        networks: data.networks || [],
-        details: data.details,
-      })
-
-      if (data.hasNFT) {
-        const networksList = data.networks?.map((n: any) => `${n.name} (${n.balance})`).join(", ") || ""
-        toast({
-          title: "NFT Verified ✅",
-          description: `Found ${data.balance} NFT(s) on: ${networksList}`,
+  const verifyNFTOwnership = useCallback(
+    async (address: string) => {
+      setIsVerifying(true)
+      try {
+        const response = await fetch("/api/auth/verify-nft", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ walletAddress: address }),
         })
-      } else {
-        toast({
-          title: "No NFT Found ❌",
-          description: "You need to own an NFT from the authorized collections on Monad or Base",
-          variant: "destructive",
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to verify NFT ownership")
+        }
+
+        setNftStatus({
+          hasNFT: data.hasNFT,
+          balance: data.balance,
+          checked: true,
+          networks: data.networks || [],
+          details: data.details,
         })
+
+        if (data.hasNFT) {
+          const networksList = data.networks?.map((n: any) => `${n.name} (${n.balance})`).join(", ") || ""
+          toast({
+            title: "NFT Verified ✅",
+            description: `Found ${data.balance} NFT(s) on: ${networksList}`,
+          })
+        } else {
+          toast({
+            title: "No NFT Found ❌",
+            description: "You need to own an NFT from the authorized collections",
+            variant: "destructive",
+          })
+        }
+      } catch (error: any) {
+        console.error("Error verifying NFT:", error)
+        setError(error.message)
+        setNftStatus({ hasNFT: false, balance: 0, checked: true, networks: [], details: null })
+      } finally {
+        setIsVerifying(false)
       }
-    } catch (error: any) {
-      console.error("Error verifying NFT:", error)
-      setError(error.message)
-      setNftStatus({ hasNFT: false, balance: 0, checked: true, networks: [], details: null })
-    } finally {
-      setIsVerifying(false)
-    }
-  }, [toast])
+    },
+    [toast]
+  )
 
   useEffect(() => {
+    if (!isClient) return
+
     const checkWalletConnection = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
+      if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: "eth_accounts" })
           if (accounts.length > 0) {
@@ -101,10 +110,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     }
 
     checkWalletConnection()
-  }, [verifyNFTOwnership])
+  }, [isClient, verifyNFTOwnership])
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.ethereum) return
+    if (!isClient || !window.ethereum) return
 
     const handleAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
@@ -144,10 +153,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
         window.ethereum.removeListener("disconnect", handleDisconnect)
       }
     }
-  }, [walletAddress, verifyNFTOwnership, toast])
+  }, [isClient, walletAddress, verifyNFTOwnership, toast])
 
   const switchToMonadTestnet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
+    if (!window.ethereum) {
       throw new Error("MetaMask is not available")
     }
 
@@ -187,7 +196,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
   }
 
   const connectWallet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
+    if (!window.ethereum) {
       setError("MetaMask is not installed. Please install MetaMask to continue.")
       toast({
         title: "MetaMask Not Found",
@@ -239,7 +248,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       return
     }
 
-    if (typeof window === "undefined" || !window.ethereum) {
+    if (!window.ethereum) {
       setError("MetaMask is not available")
       return
     }
@@ -291,6 +300,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     } finally {
       setIsVerifying(false)
     }
+  }
+
+  if (!isClient) {
+    return null
   }
 
   return (
@@ -448,7 +461,7 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           </div>
         )}
 
-        {typeof window !== "undefined" && !window.ethereum && (
+        {!window.ethereum && (
           <Alert className="bg-blue-900/50 border-blue-700">
             <AlertDescription className="text-blue-200">
               MetaMask is required to connect your wallet.{" "}
