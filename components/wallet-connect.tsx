@@ -157,11 +157,32 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       // Create message to sign
       const message = `Login to OSINT HUB with wallet: ${walletAddress}`
 
-      // Request signature
-      const signature = await window.ethereum.request({
-        method: "personal_sign",
-        params: [message, walletAddress],
-      })
+      console.log("=== Frontend Auth Debug ===")
+      console.log("Message to sign:", message)
+      console.log("Message length:", message.length)
+      console.log("Wallet address:", walletAddress)
+      console.log("Message bytes:", new TextEncoder().encode(message))
+
+      // Request signature - try standard params order first
+      let signature
+      try {
+        signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [message, walletAddress],
+        })
+        console.log("Signature obtained with standard params order")
+      } catch (e) {
+        console.log("Standard order failed, trying reverse order...")
+        // Some mobile wallets use reverse order
+        signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [walletAddress, message],
+        })
+        console.log("Signature obtained with reverse params order")
+      }
+
+      console.log("Signature:", signature)
+      console.log("Sending to backend:", { walletAddress, message, signature: signature.substring(0, 20) + "..." })
 
       // Authenticate with backend
       const response = await fetch("/api/auth/nft-auth", {
@@ -177,8 +198,10 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
       })
 
       const data = await response.json()
+      console.log("Backend response:", data)
 
       if (!response.ok) {
+        console.error("Backend error:", data)
         throw new Error(data.error || "Authentication failed")
       }
 
