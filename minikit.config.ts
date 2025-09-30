@@ -17,6 +17,8 @@ export const minikitConfig = {
     homeUrl: "https://base-mini-app-flame.vercel.app",
     webhookUrl: "https://base-mini-app-flame.vercel.app/api/webhook",
     ogImageUrl: "https://base-mini-app-flame.vercel.app/images/osint-hub-nft.png",
+    splashBackgroundColor: "#0052FF",
+    primaryCategory: "utility",
     categories: ["tools", "analytics"],
     tags: ["osint", "intelligence", "analytics", "blockchain"]
   }

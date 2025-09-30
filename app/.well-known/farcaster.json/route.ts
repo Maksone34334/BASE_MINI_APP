@@ -12,8 +12,10 @@ export async function GET() {
       homeUrl: minikitConfig.miniapp.homeUrl,
       iconUrl: minikitConfig.miniapp.icon,
       splashImageUrl: minikitConfig.miniapp.screenshot,
+      splashBackgroundColor: minikitConfig.miniapp.splashBackgroundColor,
       webhookUrl: minikitConfig.miniapp.webhookUrl,
-      ogImageUrl: minikitConfig.miniapp.ogImageUrl
+      ogImageUrl: minikitConfig.miniapp.ogImageUrl,
+      primaryCategory: minikitConfig.miniapp.primaryCategory
     }
   });
 }
