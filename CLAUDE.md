@@ -63,14 +63,13 @@ This is a **Base Mini App** integrated with Farcaster. Key architectural pattern
 
 ### NFT Access Control
 
-**Contract Addresses:**
+**Contract Address:**
 - Base Mainnet: `0x8cf392D33050F96cF6D0748486490d3dEae52564`
-- Monad Testnet: `0xC1C4d4A5A384DE53BcFadB43D0e8b08966195757`
 
 **NFT Verification Flow:**
 1. Client signs message: `Login to OSINT HUB with wallet: {address}`
-2. Server checks NFT balance via RPC calls (with fallback RPCs for Base)
-3. If balance > 0 on either chain, access granted
+2. Server checks NFT balance via RPC calls (with fallback RPCs for Base Mainnet)
+3. If balance > 0, access granted
 4. Session token created with embedded wallet address
 
 **Rate Limiting:**
@@ -88,9 +87,8 @@ Required in `.env.local`:
 OSINT_API_TOKEN=              # OSINT service API token
 OSINT_SESSION_SECRET=         # Session signing secret
 
-# NFT Contract Addresses (read from .env but also hardcoded in code)
+# NFT Contract Address (Base Mainnet only)
 NFT_CONTRACT_ADDRESS_BASE=
-NFT_CONTRACT_ADDRESS_MONAD=
 
 # OnchainKit
 NEXT_PUBLIC_ONCHAINKIT_API_KEY=   # Required for MiniKitProvider
@@ -123,9 +121,7 @@ NEXT_PUBLIC_ICON_URL=
 
 ### RPC Strategy for NFT Verification
 - Base Mainnet uses fallback RPC array for reliability
-- Monad Testnet uses single RPC endpoint
 - All RPC calls have 10-second timeout
-- Parallel balance checks with `Promise.all`
 - Graceful degradation on RPC failures
 
 ### Token Format
