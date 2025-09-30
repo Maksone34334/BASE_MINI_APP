@@ -156,6 +156,27 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
     }
   }
 
+  const isMobile = () => {
+    if (typeof window === 'undefined') return false
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  }
+
+  const hasWalletProvider = () => {
+    if (typeof window === 'undefined') return false
+    return !!(window.ethereum || (window as any).coinbaseWalletExtension)
+  }
+
+  const openInWallet = () => {
+    const url = window.location.href
+    // Try Coinbase Wallet first
+    const coinbaseDeeplink = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`
+    // Fallback to MetaMask
+    const metamaskDeeplink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`
+
+    // Try Coinbase first
+    window.location.href = coinbaseDeeplink
+  }
+
   return (
     <Card className="w-full max-w-md bg-card/90 border-primary/30 backdrop-blur-sm cyber-glow">
       <CardHeader>
@@ -316,8 +337,44 @@ export default function WalletConnect({ onAuthSuccess }: WalletConnectProps) {
           </div>
         )}
 
-        {/* No Wallet Provider */}
-        {connectors.length === 0 && (
+        {/* Mobile without wallet - show deeplink button */}
+        {isMobile() && !hasWalletProvider() && !isConnected && (
+          <Alert className="bg-blue-900/50 border-blue-700">
+            <AlertDescription className="text-blue-200 space-y-3">
+              <p>Wallet not detected. Open this page in your wallet's browser:</p>
+              <Button
+                onClick={openInWallet}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Open in Coinbase Wallet
+              </Button>
+              <p className="text-xs text-center">
+                Or manually open{" "}
+                <a
+                  href="https://www.coinbase.com/wallet"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Coinbase Wallet
+                </a>
+                {" / "}
+                <a
+                  href="https://metamask.io/download/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  MetaMask
+                </a>
+                {" and browse to this page"}
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Desktop without wallet */}
+        {!isMobile() && connectors.length === 0 && (
           <Alert className="bg-blue-900/50 border-blue-700">
             <AlertDescription className="text-blue-200">
               A Web3 wallet is required to connect. Install:{" "}
