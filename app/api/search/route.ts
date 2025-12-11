@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { nftHolderLimiter, regularUserLimiter, extractWalletFromToken, isNFTHolder } from "@/lib/rate-limiter"
+import { nftHolderLimiter, extractWalletFromToken, isNFTHolder } from "@/lib/rate-limiter"
+import { validateX402Ticket, X402_PRICE_USD } from "@/lib/x402"
 
 const API_TOKEN = process.env.OSINT_API_TOKEN
 const SESSION_SECRET = process.env.OSINT_SESSION_SECRET
@@ -43,6 +44,22 @@ export async function POST(request: NextRequest) {
     console.log("Extracted wallet address:", walletAddress)
     if (!walletAddress) {
       return NextResponse.json({ error: "Invalid NFT token format" }, { status: 401 })
+    }
+
+    const paymentToken =
+      request.headers.get("x-402-payment-token") || request.headers.get("x402-payment-token") || request.headers.get("x-402")
+
+    const paymentCheck = await validateX402Ticket(paymentToken || "", walletAddress)
+
+    if (!paymentCheck.valid) {
+      return NextResponse.json(
+        {
+          error: "Payment required",
+          message: paymentCheck.reason || "Submit X402 payment to run this query",
+          price: X402_PRICE_USD,
+        },
+        { status: 402 },
+      )
     }
 
     const rateLimitResult = nftHolderLimiter.checkLimit(walletAddress)
