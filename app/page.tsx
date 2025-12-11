@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useX402Payment } from "@/hooks/use-x402-payment"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import dynamic from "next/dynamic"
 
@@ -50,8 +51,10 @@ export default function OSINTMini() {
   const [isLoading, setIsLoading] = useState(false)
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null)
   const [error, setError] = useState("")
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
 
   const { toast } = useToast()
+  const { priceUsd, isPaying, error: paymentError, startPayment, resetPayment } = useX402Payment(sessionToken)
 
   useEffect(() => {
     // Check saved session
@@ -63,6 +66,7 @@ export default function OSINTMini() {
         const user = JSON.parse(savedUser)
         setCurrentUser(user)
         setIsLoggedIn(true)
+        setSessionToken(savedToken)
       } catch (error) {
         console.error("Error parsing saved user:", error)
         localStorage.removeItem("osint_user")
@@ -78,6 +82,8 @@ export default function OSINTMini() {
     setIsLoggedIn(false)
     setApiResponse(null)
     setQuery("")
+    setSessionToken(null)
+    resetPayment()
 
     toast({
       title: "Logged Out",
@@ -96,17 +102,24 @@ export default function OSINTMini() {
       return
     }
 
+    if (!sessionToken) {
+      setError("Missing session token. Please reconnect your wallet")
+      return
+    }
+
     setError("")
     setIsLoading(true)
 
     try {
-      const token = localStorage.getItem("osint_token")
+      const walletAddress = currentUser.address || currentUser.id
+      const paymentTicket = await startPayment(walletAddress, query)
 
       const response = await fetch("/api/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${sessionToken}`,
+          "X-402-Payment-Token": paymentTicket,
         },
         body: JSON.stringify({
           request: query,
@@ -138,6 +151,7 @@ export default function OSINTMini() {
       })
     } finally {
       setIsLoading(false)
+      resetPayment()
     }
   }
 
@@ -161,9 +175,16 @@ export default function OSINTMini() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="border-primary text-primary">
-                {currentUser.address ? `${currentUser.address.slice(0, 6)}...${currentUser.address.slice(-4)}` : currentUser.id?.slice(0, 6) + '...' + currentUser.id?.slice(-4)}
+                {currentUser.address
+                  ? `${currentUser.address.slice(0, 6)}...${currentUser.address.slice(-4)}`
+                  : currentUser.id
+                    ? `${currentUser.id.slice(0, 6)}...${currentUser.id.slice(-4)}`
+                    : "Unknown"}
               </Badge>
               <Badge className="bg-green-600 text-white">{currentUser.role}</Badge>
+              <Badge variant="outline" className="border-yellow-500 text-yellow-300">
+                {`x402 • ${priceUsd.toFixed(2)}/query`}
+              </Badge>
             </div>
             <Button
               onClick={handleLogout}
@@ -207,6 +228,7 @@ export default function OSINTMini() {
                       localStorage.setItem("osint_token", token)
                       setCurrentUser(user)
                       setIsLoggedIn(true)
+                      setSessionToken(token)
                       toast({
                         title: "NFT Verified!",
                         description: "Access granted to OSINT platform",
@@ -293,11 +315,14 @@ export default function OSINTMini() {
                 </div>
                 <Button
                   onClick={makeSearch}
-                  disabled={isLoading}
+                  disabled={isLoading || isPaying}
                   className="bg-primary hover:bg-primary/90 text-white cyber-glow px-8"
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  {isLoading || isPaying ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{isPaying ? "Processing x402" : "Analyzing"}</span>
+                    </div>
                   ) : (
                     <>
                       <Search className="mr-2 h-4 w-4" />
@@ -305,6 +330,13 @@ export default function OSINTMini() {
                     </>
                   )}
                 </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="border-yellow-500 text-yellow-300">
+                  x402 payment
+                </Badge>
+                <span>{`${priceUsd.toFixed(2)} per request • charged before each OSINT search`}</span>
               </div>
 
               <div className="text-sm text-muted-foreground">
@@ -323,10 +355,17 @@ export default function OSINTMini() {
                 </div>
               </div>
 
-              {error && (
+              {(error || paymentError) && (
                 <Alert variant="destructive" className="bg-blue-900/50 border-blue-700">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="space-y-1">
+                    {error && <span>{error}</span>}
+                    {paymentError && (
+                      <span className="block text-yellow-100 text-xs">
+                        Проблема с оплатой X402: {paymentError}
+                      </span>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
             </CardContent>
